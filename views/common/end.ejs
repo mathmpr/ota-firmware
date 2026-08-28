@@ -1,0 +1,44 @@
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+
+<%
+  const feedbackMessages = [
+    ...((flash.success || []).map((message) => ({ type: 'success', message }))),
+    ...((flash.error || []).map((message) => ({ type: 'error', message }))),
+    ...((flash.info || []).map((message) => ({ type: 'info', message })))
+  ];
+%>
+
+<% if (feedbackMessages.length) { %>
+  <div class="modal fade feedback-modal" id="feedbackModal" tabindex="-1" aria-labelledby="feedbackModalTitle" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content">
+        <div class="modal-header">
+          <div>
+            <div class="feedback-kicker">OTA Firmware</div>
+            <h1 class="modal-title fs-6" id="feedbackModalTitle">Atualização de status</h1>
+          </div>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+        </div>
+        <div class="modal-body">
+          <% feedbackMessages.forEach((item) => { %>
+            <div class="feedback-item feedback-item-<%= item.type %>">
+              <span class="feedback-dot"></span>
+              <span><%= item.message %></span>
+            </div>
+          <% }) %>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      const modalElement = document.getElementById('feedbackModal');
+      if (!modalElement) {
+        return;
+      }
+
+      bootstrap.Modal.getOrCreateInstance(modalElement).show();
+    });
+  </script>
+<% } %>

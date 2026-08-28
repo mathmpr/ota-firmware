@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="pt-BR" data-bs-theme="dark">
+<head>
+  <%- include('../common/head.ejs', { title: 'Devices | OTA Firmware' }) %>
+</head>
+<body class="app-view">
+<%- include('../common/nav.ejs', { user }) %>
+
+<main class="main-content">
+  <div class="page-head">
+    <div>
+      <h1 class="page-title">Devices</h1>
+      <p class="page-subtitle">Cada MAC aparece uma vez, cadastrado no primeiro request de manifesto.</p>
+    </div>
+    <span class="badge rounded-pill text-bg-primary"><%= devices.length %> devices</span>
+  </div>
+
+  <section class="panel">
+    <div class="table-responsive">
+      <table class="table table-finora align-middle mb-0">
+        <thead>
+        <tr>
+          <th>MAC</th>
+          <th>Device ID</th>
+          <th>Board</th>
+          <th>Primeiro request</th>
+          <th>Ultimo request</th>
+          <th>Firmware ativo</th>
+          <th></th>
+        </tr>
+        </thead>
+        <tbody>
+        <% devices.forEach((device) => { 
+          const active = [...device.firmwares].filter(f => f.active).sort((a, b) => new Date(b.created_at) - new Date(a.created_at))[0];
+        %>
+          <tr>
+            <td><code><%= device.mac %></code></td>
+            <td><%= device.device_id || '-' %></td>
+            <td><span class="badge text-bg-secondary"><%= device.board || '-' %></span></td>
+            <td><%= moment(device.first_seen_at).tz('America/Sao_Paulo').format('DD/MM/YYYY HH:mm:ss') %></td>
+            <td><%= moment(device.last_seen_at).tz('America/Sao_Paulo').format('DD/MM/YYYY HH:mm:ss') %></td>
+            <td>
+              <% if (active) { %>
+                <span class="badge text-bg-success">v<%= active.version %></span>
+              <% } else { %>
+                <span class="badge text-bg-warning">sem firmware</span>
+              <% } %>
+            </td>
+            <td class="text-end">
+              <a class="btn btn-sm btn-primary" href="/admin/devices/<%= device.id %>">Gerenciar</a>
+            </td>
+          </tr>
+        <% }) %>
+        <% if (!devices.length) { %>
+          <tr>
+            <td colspan="7" class="text-center text-muted py-5">Nenhum device registrado ainda.</td>
+          </tr>
+        <% } %>
+        </tbody>
+      </table>
+    </div>
+  </section>
+</main>
+
+<%- include('../common/end.ejs') %>
+</body>
+</html>

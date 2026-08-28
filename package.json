@@ -1,0 +1,34 @@
+{
+  "name": "ota-firmware",
+  "version": "0.1.0",
+  "private": true,
+  "engines": {
+    "node": ">=24"
+  },
+  "scripts": {
+    "start": "node main.js",
+    "dev": "node --watch main.js",
+    "migrate": "knex migrate:latest",
+    "seed": "knex seed:run",
+    "init-db": "knex migrate:latest && knex seed:run"
+  },
+  "dependencies": {
+    "bcrypt": "^6.0.0",
+    "connect-flash": "^0.1.1",
+    "cookie-parser": "^1.4.7",
+    "cors": "^2.8.5",
+    "dotenv": "^17.2.1",
+    "ejs": "^3.1.10",
+    "express": "^5.1.0",
+    "express-session": "^1.18.2",
+    "jsonwebtoken": "^9.0.2",
+    "knex": "^3.1.0",
+    "moment-timezone": "^0.6.0",
+    "multer": "^2.0.2",
+    "objection": "^3.1.5",
+    "sqlite3": "^5.1.7"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.10"
+  }
+}

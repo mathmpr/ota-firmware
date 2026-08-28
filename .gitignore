@@ -1,0 +1,6 @@
+node_modules/
+.env
+dev.sqlite3
+storage/
+public/uploads/
+.idea

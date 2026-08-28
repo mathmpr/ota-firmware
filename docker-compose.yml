@@ -1,0 +1,19 @@
+services:
+  server:
+    build: .
+    ports:
+      - "${PORT:-3000}:3000"
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      SESSION_SECRET: "${SESSION_SECRET:-change-me}"
+      DATABASE_PATH: /data/dev.sqlite3
+      FIRMWARE_STORAGE_PATH: /data/firmwares
+      DEFAULT_ADMIN_EMAIL: "${DEFAULT_ADMIN_EMAIL:-admin@ota.local}"
+      DEFAULT_ADMIN_PASSWORD: "${DEFAULT_ADMIN_PASSWORD:-admin123456}"
+      TZ: America/Sao_Paulo
+    volumes:
+      - ota_firmware_data:/data
+
+volumes:
+  ota_firmware_data:
