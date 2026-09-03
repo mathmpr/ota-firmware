@@ -1,6 +1,6 @@
 const Device = require('../models/Device');
 const { registerManifestRequest, normalizeMac } = require('../services/deviceService');
-const { activeFirmwareForDevice } = require('../services/firmwareService');
+const { activeFirmwareForGroup } = require('../services/firmwareService');
 
 function baseUrl(req) {
   const forwardedProto = req.get('x-forwarded-proto');
@@ -11,9 +11,6 @@ function baseUrl(req) {
 function binaryQuery(device) {
   const params = new URLSearchParams();
   params.set('mac', device.mac);
-  if (device.device_id) {
-    params.set('deviceId', device.device_id);
-  }
   return params.toString();
 }
 
@@ -30,12 +27,22 @@ module.exports = {
       return;
     }
 
-    const firmware = await activeFirmwareForDevice(registered.device.id);
+    if (!registered.device.device_group_id) {
+      res.status(404).json({
+        error: 'Device is not assigned to a firmware group yet.',
+        mac: registered.device.mac,
+        familyId: registered.device.family_id,
+        board: registered.device.board
+      });
+      return;
+    }
+
+    const firmware = await activeFirmwareForGroup(registered.device.device_group_id);
     if (!firmware) {
       res.status(404).json({
-        error: 'No firmware available for this device yet.',
+        error: 'No firmware available for this device group yet.',
         mac: registered.device.mac,
-        deviceId: registered.device.device_id,
+        familyId: registered.device.family_id,
         board: registered.device.board
       });
       return;
@@ -45,7 +52,7 @@ module.exports = {
       version: firmware.version,
       binaryUrl: `${baseUrl(req)}${firmwareBasePath(req)}/${board}/binary?${binaryQuery(registered.device)}`,
       mac: registered.device.mac,
-      deviceId: registered.device.device_id,
+      familyId: registered.device.family_id,
       board
     });
   },
@@ -57,15 +64,21 @@ module.exports = {
       return;
     }
 
+    const board = String(req.params.board || '').trim().toLowerCase();
     const device = await Device.query().findOne({ mac });
     if (!device) {
       res.status(404).json({ error: 'Device not registered.' });
       return;
     }
 
-    const firmware = await activeFirmwareForDevice(device.id);
+    if (!device.device_group_id || device.board !== board) {
+      res.status(404).json({ error: 'Device is not registered for this board.' });
+      return;
+    }
+
+    const firmware = await activeFirmwareForGroup(device.device_group_id);
     if (!firmware) {
-      res.status(404).json({ error: 'No firmware available for this device yet.' });
+      res.status(404).json({ error: 'No firmware available for this device group yet.' });
       return;
     }
 

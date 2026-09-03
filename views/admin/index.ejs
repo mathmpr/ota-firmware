@@ -9,36 +9,54 @@
 <main class="main-content">
   <div class="page-head">
     <div>
-      <h1 class="page-title">Devices</h1>
-      <p class="page-subtitle">Cada MAC aparece uma vez, cadastrado no primeiro request de manifesto.</p>
+      <h1 class="page-title">Grupos de dispositivos</h1>
+      <p class="page-subtitle">Cada grupo combina uma Family ID e uma placa. O firmware ativo atende todos os MACs vinculados.</p>
     </div>
-    <span class="badge rounded-pill text-bg-primary"><%= devices.length %> devices</span>
+    <span class="badge rounded-pill text-bg-primary"><%= groups.length %> grupos</span>
   </div>
+
+  <section class="panel mb-3">
+    <div class="panel-header">
+      <div>
+        <h2 class="panel-title">Novo grupo</h2>
+        <p class="panel-subtitle">Use a mesma Family ID e placa anunciadas pelos devices.</p>
+      </div>
+    </div>
+    <form method="post" action="/admin/groups" class="row g-3">
+      <div class="col-12 col-md-5">
+        <label class="form-label" for="familyId">Family ID</label>
+        <input class="form-control" id="familyId" name="familyId" required>
+      </div>
+      <div class="col-12 col-md-5">
+        <label class="form-label" for="board">Placa</label>
+        <input class="form-control" id="board" name="board" placeholder="esp32-devkit" required>
+      </div>
+      <div class="col-12 col-md-2 d-flex align-items-end">
+        <button class="btn btn-primary w-100" type="submit">Criar</button>
+      </div>
+    </form>
+  </section>
 
   <section class="panel">
     <div class="table-responsive">
       <table class="table table-finora align-middle mb-0">
         <thead>
         <tr>
-          <th>MAC</th>
-          <th>Device ID</th>
+          <th>Family ID</th>
           <th>Board</th>
-          <th>Primeiro request</th>
-          <th>Ultimo request</th>
+          <th>Devices</th>
           <th>Firmware ativo</th>
           <th></th>
         </tr>
         </thead>
         <tbody>
-        <% devices.forEach((device) => { 
-          const active = [...device.firmwares].filter(f => f.active).sort((a, b) => new Date(b.created_at) - new Date(a.created_at))[0];
+        <% groups.forEach((group) => {
+          const active = [...group.firmwares].filter(f => f.active).sort((a, b) => new Date(b.created_at) - new Date(a.created_at))[0];
         %>
           <tr>
-            <td><code><%= device.mac %></code></td>
-            <td><%= device.device_id || '-' %></td>
-            <td><span class="badge text-bg-secondary"><%= device.board || '-' %></span></td>
-            <td><%= moment(device.first_seen_at).tz('America/Sao_Paulo').format('DD/MM/YYYY HH:mm:ss') %></td>
-            <td><%= moment(device.last_seen_at).tz('America/Sao_Paulo').format('DD/MM/YYYY HH:mm:ss') %></td>
+            <td><code><%= group.family_id %></code></td>
+            <td><span class="badge text-bg-secondary"><%= group.board %></span></td>
+            <td><%= group.devices.length %></td>
             <td>
               <% if (active) { %>
                 <span class="badge text-bg-success">v<%= active.version %></span>
@@ -47,14 +65,58 @@
               <% } %>
             </td>
             <td class="text-end">
-              <a class="btn btn-sm btn-primary" href="/admin/devices/<%= device.id %>">Gerenciar</a>
+              <a class="btn btn-sm btn-primary" href="/admin/groups/<%= group.id %>">Gerenciar</a>
             </td>
           </tr>
         <% }) %>
-        <% if (!devices.length) { %>
+        <% if (!groups.length) { %>
           <tr>
-            <td colspan="7" class="text-center text-muted py-5">Nenhum device registrado ainda.</td>
+            <td colspan="5" class="text-center text-muted py-5">Nenhum grupo registrado ainda.</td>
           </tr>
+        <% } %>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="panel mt-3">
+    <div class="panel-header">
+      <div>
+        <h2 class="panel-title">Devices descobertos</h2>
+        <p class="panel-subtitle">Os valores de Family ID e placa sao recebidos no manifesto. Associe cada MAC ao grupo desejado.</p>
+      </div>
+    </div>
+    <div class="table-responsive">
+      <table class="table table-finora align-middle mb-0">
+        <thead>
+        <tr>
+          <th>MAC</th>
+          <th>Family ID</th>
+          <th>Placa</th>
+          <th>Grupo</th>
+          <th>Ultimo request</th>
+          <th></th>
+        </tr>
+        </thead>
+        <tbody>
+        <% devices.forEach((device) => { %>
+          <tr>
+            <td><code><%= device.mac %></code></td>
+            <td><%= device.family_id || '-' %></td>
+            <td><span class="badge text-bg-secondary"><%= device.board || '-' %></span></td>
+            <td>
+              <% if (device.group) { %>
+                <a href="/admin/groups/<%= device.group.id %>"><code><%= device.group.family_id %></code> / <%= device.group.board %></a>
+              <% } else { %>
+                <span class="badge text-bg-warning">sem grupo</span>
+              <% } %>
+            </td>
+            <td><%= moment(device.last_seen_at).tz('America/Sao_Paulo').format('DD/MM/YYYY HH:mm:ss') %></td>
+            <td class="text-end"><a class="btn btn-sm btn-primary" href="/admin/devices/<%= device.id %>">Detalhes</a></td>
+          </tr>
+        <% }) %>
+        <% if (!devices.length) { %>
+          <tr><td colspan="6" class="text-center text-muted py-5">Nenhum device registrado ainda.</td></tr>
         <% } %>
         </tbody>
       </table>

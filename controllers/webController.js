@@ -3,9 +3,10 @@ const moment = require('moment-timezone');
 const User = require('../models/User');
 const LoginBlock = require('../models/LoginBlock');
 const Device = require('../models/Device');
+const DeviceGroup = require('../models/DeviceGroup');
 const upload = require('../middlewares/upload');
 const { clientIp } = require('../services/deviceService');
-const { deleteFirmware, saveFirmware } = require('../services/firmwareService');
+const { deleteFirmware, deleteGroup, saveFirmware } = require('../services/firmwareService');
 
 const blockHours = 6;
 
@@ -95,66 +96,197 @@ module.exports = {
   },
 
   dashboard: async (_req, res) => {
+    const groups = await DeviceGroup.query()
+      .orderBy('created_at', 'desc')
+      .withGraphFetched('[devices, firmwares]');
     const devices = await Device.query()
       .orderBy('last_seen_at', 'desc')
-      .withGraphFetched('[firmwares, firstRequest]');
+      .withGraphFetched('group');
 
     res.render('admin/index', {
+      groups,
       devices,
       moment
     });
   },
 
-  device: async (req, res) => {
-    const device = await Device.query()
-      .findById(req.params.id)
-      .withGraphFetched('[firmwares, firstRequest]');
+  createGroup: async (req, res) => {
+    const familyId = String(req.body.familyId || '').trim();
+    const board = String(req.body.board || '').trim().toLowerCase();
 
+    if (!familyId || !board) {
+      req.flash('error', 'Family ID e placa sao obrigatorios.');
+      res.redirect('/admin');
+      return;
+    }
+
+    let group = await DeviceGroup.query().findOne({ family_id: familyId, board });
+    if (!group) {
+      group = await DeviceGroup.query().insert({ family_id: familyId, board });
+      req.flash('success', 'Grupo criado.');
+    } else {
+      req.flash('info', 'Esse grupo ja existe.');
+    }
+
+    res.redirect(`/admin/groups/${group.id}`);
+  },
+
+  device: async (req, res) => {
+    const device = await Device.query().findById(req.params.id).withGraphFetched('group');
     if (!device) {
       res.status(404).render('errors/404');
       return;
     }
 
-    res.render('admin/device', {
-      device,
-      moment
-    });
+    res.render('admin/device', { device, moment });
   },
 
-  uploadFirmware: [
-    upload.single('firmware'),
-    async (req, res) => {
-      const device = await Device.query().findById(req.params.id);
-      if (!device) {
-        res.status(404).render('errors/404');
-        return;
-      }
-
-      try {
-        await saveFirmware(device, req.file, req.body.version);
-        req.flash('success', 'Firmware publicado para este dispositivo.');
-      } catch (error) {
-        req.flash('error', error.message);
-      }
-
-      res.redirect(`/admin/devices/${device.id}`);
+  createGroupFromDevice: async (req, res) => {
+    const device = await Device.query().findById(req.params.id);
+    if (!device) {
+      res.status(404).render('errors/404');
+      return;
     }
-  ],
+    if (!device.family_id || !device.board) {
+      req.flash('error', 'O device ainda nao informou Family ID e placa.');
+      res.redirect(`/admin/devices/${device.id}`);
+      return;
+    }
 
-  deleteFirmware: async (req, res) => {
+    let group = await DeviceGroup.query().findOne({
+      family_id: device.family_id,
+      board: device.board
+    });
+    if (!group) {
+      group = await DeviceGroup.query().insert({
+        family_id: device.family_id,
+        board: device.board
+      });
+      req.flash('success', 'Grupo criado e device associado.');
+    } else {
+      req.flash('success', 'Device associado ao grupo existente.');
+    }
+
+    await Device.query().patchAndFetchById(device.id, { device_group_id: group.id });
+    res.redirect(`/admin/groups/${group.id}`);
+  },
+
+  deleteDevice: async (req, res) => {
     const device = await Device.query().findById(req.params.id);
     if (!device) {
       res.status(404).render('errors/404');
       return;
     }
 
+    await Device.query().deleteById(device.id);
+    req.flash('success', 'Device removido. Um novo manifesto desse MAC criara outro cadastro.');
+    res.redirect('/admin');
+  },
+
+  group: async (req, res) => {
+    const group = await DeviceGroup.query()
+      .findById(req.params.id)
+      .withGraphFetched('[devices, firmwares]');
+
+    if (!group) {
+      res.status(404).render('errors/404');
+      return;
+    }
+
+    res.render('admin/group', {
+      group,
+      moment
+    });
+  },
+
+  updateGroup: async (req, res) => {
+    const group = await DeviceGroup.query().findById(req.params.id);
+    if (!group) {
+      res.status(404).render('errors/404');
+      return;
+    }
+
+    const familyId = String(req.body.familyId || '').trim();
+    const board = String(req.body.board || '').trim().toLowerCase();
+    if (!familyId || !board) {
+      req.flash('error', 'Family ID e placa sao obrigatorios.');
+      res.redirect(`/admin/groups/${group.id}`);
+      return;
+    }
+
+    const duplicate = await DeviceGroup.query().findOne({ family_id: familyId, board });
+    if (duplicate && duplicate.id !== group.id) {
+      req.flash('error', 'Ja existe um grupo com esta Family ID e placa.');
+      res.redirect(`/admin/groups/${group.id}`);
+      return;
+    }
+
+    await DeviceGroup.transaction(async (trx) => {
+      await DeviceGroup.query(trx).patchAndFetchById(group.id, {
+        family_id: familyId,
+        board,
+        updated_at: new Date()
+      });
+      await Device.query(trx)
+        .where({ device_group_id: group.id })
+        .patch({ family_id: familyId, board, updated_at: new Date() });
+    });
+
+    req.flash('success', 'Grupo atualizado.');
+    res.redirect(`/admin/groups/${group.id}`);
+  },
+
+  deleteGroup: async (req, res) => {
+    const group = await DeviceGroup.query().findById(req.params.id);
+    if (!group) {
+      res.status(404).render('errors/404');
+      return;
+    }
+
     try {
-      await deleteFirmware(device, req.params.firmwareId);
-      req.flash('success', 'Firmware removido deste dispositivo.');
+      await deleteGroup(group);
+      req.flash('success', 'Grupo e firmwares removidos. Os devices ficaram sem grupo.');
+      res.redirect('/admin');
+    } catch (error) {
+      req.flash('error', error.message);
+      res.redirect(`/admin/groups/${group.id}`);
+    }
+  },
+
+  uploadGroupFirmware: [
+    upload.single('firmware'),
+    async (req, res) => {
+      const group = await DeviceGroup.query().findById(req.params.id);
+      if (!group) {
+        res.status(404).render('errors/404');
+        return;
+      }
+
+      try {
+        await saveFirmware(group, req.file, req.body.version);
+        req.flash('success', 'Firmware publicado para este grupo.');
+      } catch (error) {
+        req.flash('error', error.message);
+      }
+
+      res.redirect(`/admin/groups/${group.id}`);
+    }
+  ],
+
+  deleteGroupFirmware: async (req, res) => {
+    const group = await DeviceGroup.query().findById(req.params.id);
+    if (!group) {
+      res.status(404).render('errors/404');
+      return;
+    }
+
+    try {
+      await deleteFirmware(group, req.params.firmwareId);
+      req.flash('success', 'Firmware removido deste grupo.');
     } catch (error) {
       req.flash('error', error.message);
     }
 
-    res.redirect(`/admin/devices/${device.id}`);
+    res.redirect(`/admin/groups/${group.id}`);
   }
 };

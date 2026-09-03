@@ -6,24 +6,24 @@ class Device extends Model {
   }
 
   static get relationMappings() {
-    const Firmware = require('./Firmware');
     const DeviceRequest = require('./DeviceRequest');
+    const DeviceGroup = require('./DeviceGroup');
 
     return {
-      firmwares: {
-        relation: Model.HasManyRelation,
-        modelClass: Firmware,
-        join: {
-          from: 'devices.id',
-          to: 'firmwares.device_id'
-        }
-      },
       firstRequest: {
         relation: Model.HasOneRelation,
         modelClass: DeviceRequest,
         join: {
           from: 'devices.id',
           to: 'device_requests.device_id'
+        }
+      },
+      group: {
+        relation: Model.BelongsToOneRelation,
+        modelClass: DeviceGroup,
+        join: {
+          from: 'devices.device_group_id',
+          to: 'device_groups.id'
         }
       }
     };

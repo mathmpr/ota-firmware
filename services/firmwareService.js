@@ -1,6 +1,7 @@
 const fs = require('fs/promises');
 const path = require('path');
 const Firmware = require('../models/Firmware');
+const DeviceGroup = require('../models/DeviceGroup');
 
 function storageRoot() {
   return path.resolve(process.env.FIRMWARE_STORAGE_PATH || path.join(__dirname, '..', 'storage', 'firmwares'));
@@ -15,9 +16,9 @@ function maxFirmwareSizeForBoard(board) {
   return null;
 }
 
-async function activeFirmwareForDevice(deviceId) {
+async function activeFirmwareForGroup(groupId) {
   return Firmware.query()
-    .where({ device_id: deviceId, active: true })
+    .where({ device_group_id: groupId, active: true })
     .orderBy('created_at', 'desc')
     .first();
 }
@@ -35,7 +36,7 @@ async function moveUploadedFile(sourcePath, targetPath) {
   }
 }
 
-async function saveFirmware(device, file, version) {
+async function saveFirmware(group, file, version) {
   const cleanVersion = String(version || '').trim();
   if (!cleanVersion) {
     throw new Error('Version is required.');
@@ -53,13 +54,13 @@ async function saveFirmware(device, file, version) {
     throw new Error('Invalid ESP firmware binary. Expected a .bin file starting with magic byte 0xE9.');
   }
 
-  const maxSize = maxFirmwareSizeForBoard(device.board);
+  const maxSize = maxFirmwareSizeForBoard(group.board);
   if (maxSize !== null && file.size > maxSize) {
     await fs.unlink(file.path).catch(() => {});
-    throw new Error(`Firmware is too large for ${device.board}. Max: ${maxSize} bytes. Received: ${file.size} bytes.`);
+    throw new Error(`Firmware is too large for ${group.board}. Max: ${maxSize} bytes. Received: ${file.size} bytes.`);
   }
 
-  const dir = path.join(storageRoot(), String(device.id));
+  const dir = path.join(storageRoot(), 'groups', String(group.id));
   await fs.mkdir(dir, { recursive: true });
 
   const extension = path.extname(file.originalname || '') || '.bin';
@@ -69,11 +70,11 @@ async function saveFirmware(device, file, version) {
   await moveUploadedFile(file.path, targetPath);
 
   await Firmware.query()
-    .where({ device_id: device.id, active: true })
+    .where({ device_group_id: group.id, active: true })
     .patch({ active: false, updated_at: new Date() });
 
   return Firmware.query().insert({
-    device_id: device.id,
+    device_group_id: group.id,
     version: cleanVersion,
     original_name: file.originalname || storedName,
     stored_name: storedName,
@@ -83,13 +84,13 @@ async function saveFirmware(device, file, version) {
   });
 }
 
-async function deleteFirmware(device, firmwareId) {
+async function deleteFirmware(group, firmwareId) {
   const firmware = await Firmware.query()
-    .where({ id: firmwareId, device_id: device.id })
+    .where({ id: firmwareId, device_group_id: group.id })
     .first();
 
   if (!firmware) {
-    throw new Error('Firmware nao encontrado para este dispositivo.');
+    throw new Error('Firmware nao encontrado para este grupo.');
   }
 
   await Firmware.query().deleteById(firmware.id);
@@ -104,7 +105,7 @@ async function deleteFirmware(device, firmwareId) {
 
   if (firmware.active) {
     const latest = await Firmware.query()
-      .where({ device_id: device.id })
+      .where({ device_group_id: group.id })
       .orderBy('created_at', 'desc')
       .first();
 
@@ -117,9 +118,30 @@ async function deleteFirmware(device, firmwareId) {
   }
 }
 
+async function deleteGroup(group) {
+  const firmwares = await Firmware.query().where({ device_group_id: group.id });
+
+  for (const firmware of firmwares) {
+    try {
+      await fs.unlink(firmware.storage_path);
+    } catch (error) {
+      if (error.code !== 'ENOENT') {
+        throw error;
+      }
+    }
+  }
+
+  await DeviceGroup.query().deleteById(group.id);
+  await fs.rm(path.join(storageRoot(), 'groups', String(group.id)), {
+    recursive: true,
+    force: true
+  });
+}
+
 module.exports = {
-  activeFirmwareForDevice,
+  activeFirmwareForGroup,
   deleteFirmware,
+  deleteGroup,
   saveFirmware,
   storageRoot
 };

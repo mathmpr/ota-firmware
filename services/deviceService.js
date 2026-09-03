@@ -13,22 +13,38 @@ function normalizeMac(mac) {
   return String(mac || '').trim().toUpperCase();
 }
 
+function normalizeFamilyId(familyId) {
+  return String(familyId || '').trim();
+}
+
 async function registerManifestRequest(req, board) {
   const mac = normalizeMac(req.query.mac || req.headers['x-device-mac']);
   if (!mac) {
     return { ok: false, status: 400, error: 'MAC address is required.' };
   }
 
+  const familyId = normalizeFamilyId(req.query.familyId);
+  if (!familyId) {
+    return { ok: false, status: 400, error: 'Family ID is required.' };
+  }
+  if (!board) {
+    return { ok: false, status: 400, error: 'Board is required.' };
+  }
+
+  let device = await Device.query().findOne({ mac });
   const ip = clientIp(req);
   const devicePayload = {
     mac,
-    device_id: req.query.deviceId || null,
-    board: board || null,
+    family_id: familyId,
+    board,
     last_ip: ip,
     last_seen_at: new Date()
   };
 
-  let device = await Device.query().findOne({ mac });
+  if (device && (device.family_id !== familyId || device.board !== board)) {
+    devicePayload.device_group_id = null;
+  }
+
   if (!device) {
     device = await Device.query().insert({
       ...devicePayload,
@@ -63,5 +79,6 @@ function redactHeaders(headers) {
 module.exports = {
   clientIp,
   normalizeMac,
+  normalizeFamilyId,
   registerManifestRequest
 };

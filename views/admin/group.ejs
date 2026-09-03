@@ -1,0 +1,160 @@
+<!doctype html>
+<html lang="pt-BR" data-bs-theme="dark">
+<head>
+  <%- include('../common/head.ejs', { title: 'Grupo | OTA Firmware' }) %>
+</head>
+<body class="app-view">
+<%- include('../common/nav.ejs', { user }) %>
+
+<main class="main-content">
+  <div class="page-head">
+    <div>
+      <a href="/admin" class="back-link">Voltar</a>
+      <h1 class="page-title"><code><%= group.family_id %></code></h1>
+      <p class="page-subtitle">Firmware compartilhado pelos devices desta Family ID e placa.</p>
+    </div>
+  </div>
+
+  <div class="row g-3 mb-3">
+    <div class="col-12 col-md-6">
+      <div class="stat-card">
+        <div class="stat-label">Family ID</div>
+        <div class="stat-value stat-value-sm"><%= group.family_id %></div>
+      </div>
+    </div>
+    <div class="col-12 col-md-6">
+      <div class="stat-card">
+        <div class="stat-label">Board</div>
+        <div class="stat-value stat-value-sm"><%= group.board %></div>
+      </div>
+    </div>
+  </div>
+
+  <section class="panel mb-3">
+    <div class="panel-header">
+      <div>
+        <h2 class="panel-title">Editar grupo</h2>
+        <p class="panel-subtitle">A alteracao tambem atualiza a Family ID e a placa dos devices associados.</p>
+      </div>
+    </div>
+    <form method="post" action="/admin/groups/<%= group.id %>/edit" class="row g-3">
+      <div class="col-12 col-md-5">
+        <label class="form-label" for="familyId">Family ID</label>
+        <input class="form-control" id="familyId" name="familyId" value="<%= group.family_id %>" required>
+      </div>
+      <div class="col-12 col-md-5">
+        <label class="form-label" for="board">Placa</label>
+        <input class="form-control" id="board" name="board" value="<%= group.board %>" required>
+      </div>
+      <div class="col-12 col-md-2 d-flex align-items-end">
+        <button class="btn btn-primary w-100" type="submit">Salvar</button>
+      </div>
+    </form>
+  </section>
+
+  <section class="panel mb-3">
+    <div class="panel-header">
+      <div>
+        <h2 class="panel-title">Novo firmware</h2>
+        <p class="panel-subtitle">Todos os MACs deste grupo receberao esta versao no proximo manifesto.</p>
+      </div>
+    </div>
+    <form method="post" action="/admin/groups/<%= group.id %>/firmware" enctype="multipart/form-data" class="row g-3">
+      <div class="col-12 col-md-4">
+        <label class="form-label" for="version">Versao</label>
+        <input class="form-control" id="version" name="version" placeholder="1.0.1" required>
+      </div>
+      <div class="col-12 col-md-6">
+        <label class="form-label" for="firmware">Binario</label>
+        <input class="form-control" id="firmware" name="firmware" type="file" accept=".bin,application/octet-stream" required>
+      </div>
+      <div class="col-12 col-md-2 d-flex align-items-end">
+        <button class="btn btn-primary w-100" type="submit">Publicar</button>
+      </div>
+    </form>
+  </section>
+
+  <section class="panel mb-3">
+    <div class="panel-header">
+      <div>
+        <h2 class="panel-title">Devices</h2>
+        <p class="panel-subtitle">MACs que receberao o firmware deste grupo.</p>
+      </div>
+    </div>
+    <div class="table-responsive">
+      <table class="table table-finora align-middle mb-0">
+        <thead><tr><th>MAC</th><th>Ultimo IP</th><th>Ultimo request</th></tr></thead>
+        <tbody>
+        <% [...group.devices].sort((a, b) => new Date(b.last_seen_at) - new Date(a.last_seen_at)).forEach((device) => { %>
+          <tr>
+            <td><code><%= device.mac %></code></td>
+            <td><%= device.last_ip || '-' %></td>
+            <td><%= moment(device.last_seen_at).tz('America/Sao_Paulo').format('DD/MM/YYYY HH:mm:ss') %></td>
+          </tr>
+        <% }) %>
+        <% if (!group.devices.length) { %>
+          <tr><td colspan="3" class="text-center text-muted py-5">Nenhum device registrado neste grupo.</td></tr>
+        <% } %>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="panel">
+    <div class="panel-header"><div><h2 class="panel-title">Historico</h2><p class="panel-subtitle">Firmwares publicados para este grupo.</p></div></div>
+    <div class="table-responsive">
+      <table class="table table-finora align-middle mb-0">
+        <thead><tr><th>Versao</th><th>Arquivo</th><th>Tamanho</th><th>Status</th><th>Criado em</th><th></th></tr></thead>
+        <tbody>
+        <% [...group.firmwares].sort((a, b) => new Date(b.created_at) - new Date(a.created_at)).forEach((firmware) => { %>
+          <tr>
+            <td><span class="badge text-bg-primary">v<%= firmware.version %></span></td>
+            <td><%= firmware.original_name %></td><td><%= firmware.size %> bytes</td>
+            <td><%= firmware.active ? 'ativo' : 'substituido' %></td>
+            <td><%= moment(firmware.created_at).tz('America/Sao_Paulo').format('DD/MM/YYYY HH:mm:ss') %></td>
+            <td class="text-end"><form method="post" action="/admin/groups/<%= group.id %>/firmwares/<%= firmware.id %>/delete" class="m-0"><button class="btn btn-sm btn-outline-danger" type="submit">Excluir</button></form></td>
+          </tr>
+        <% }) %>
+        <% if (!group.firmwares.length) { %>
+          <tr><td colspan="6" class="text-center text-muted py-5">Nenhum firmware publicado.</td></tr>
+        <% } %>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="panel mt-3">
+    <div class="panel-header">
+      <div>
+        <h2 class="panel-title">Excluir grupo</h2>
+        <p class="panel-subtitle">Os firmwares serao removidos e os devices ficarao sem grupo.</p>
+      </div>
+    </div>
+    <button class="btn btn-danger" type="button" data-bs-toggle="modal" data-bs-target="#deleteGroupModal">Excluir grupo</button>
+  </section>
+</main>
+
+<div class="modal fade" id="deleteGroupModal" tabindex="-1" aria-labelledby="deleteGroupModalTitle" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h1 class="modal-title fs-6" id="deleteGroupModalTitle">Excluir grupo</h1>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+      </div>
+      <div class="modal-body">
+        <p class="mb-2">Excluir o grupo <code><%= group.family_id %></code> / <code><%= group.board %></code>?</p>
+        <p class="mb-0 text-danger">Os firmwares publicados serao removidos e os devices ficarao sem grupo.</p>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-outline-secondary" type="button" data-bs-dismiss="modal">Cancelar</button>
+        <form method="post" action="/admin/groups/<%= group.id %>/delete" class="m-0">
+          <button class="btn btn-danger" type="submit">Continuar</button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+<%- include('../common/end.ejs') %>
+</body>
+</html>
