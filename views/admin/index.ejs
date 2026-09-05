@@ -94,6 +94,7 @@
           <th>Family ID</th>
           <th>Placa</th>
           <th>Grupo</th>
+          <th>Versao OTA atual</th>
           <th>Ultimo request</th>
           <th></th>
         </tr>
@@ -111,12 +112,19 @@
                 <span class="badge text-bg-warning">sem grupo</span>
               <% } %>
             </td>
+            <td>
+              <% if (device.current_ota_version) { %>
+                <span class="badge text-bg-info">v<%= device.current_ota_version %></span>
+              <% } else { %>
+                <span class="text-muted">nao informada</span>
+              <% } %>
+            </td>
             <td><%= moment(device.last_seen_at).tz('America/Sao_Paulo').format('DD/MM/YYYY HH:mm:ss') %></td>
             <td class="text-end"><a class="btn btn-sm btn-primary" href="/admin/devices/<%= device.id %>">Detalhes</a></td>
           </tr>
         <% }) %>
         <% if (!devices.length) { %>
-          <tr><td colspan="6" class="text-center text-muted py-5">Nenhum device registrado ainda.</td></tr>
+          <tr><td colspan="7" class="text-center text-muted py-5">Nenhum device registrado ainda.</td></tr>
         <% } %>
         </tbody>
       </table>

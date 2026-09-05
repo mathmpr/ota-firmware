@@ -4,8 +4,8 @@ Servidor web para distribuir firmwares por grupos de dispositivos, identificados
 
 ## Fluxo
 
-1. O device chama `GET /api/firmware/:board/manifest.json?familyId=<id>&mac=<mac>`.
-2. O servidor cadastra ou atualiza o MAC com a Family ID e a placa anunciadas.
+1. O device chama `GET /api/firmware/:board/manifest.json?familyId=<id>&mac=<mac>&CURRENT_OTA_VERSION=<versao>`.
+2. O servidor cadastra ou atualiza o MAC com a Family ID, a placa e, quando enviada, a versao OTA atual anunciadas.
 3. Pela dashboard, associe o device a um grupo e publique um `.bin` e uma versao para esse grupo.
 4. Enquanto o device nao estiver em um grupo com firmware, o manifesto responde `404`.
 5. No proximo request, o device recebe `version` e `binaryUrl`.
@@ -32,7 +32,7 @@ Altere `DEFAULT_ADMIN_EMAIL` e `DEFAULT_ADMIN_PASSWORD` no `.env` antes de rodar
 ## Endpoints MiniCore
 
 ```text
-GET /api/firmware/esp32-devkit/manifest.json?familyId=esp32-devkit-01&mac=AA:BB:CC:DD:EE:FF
+GET /api/firmware/esp32-devkit/manifest.json?familyId=esp32-devkit-01&mac=AA:BB:CC:DD:EE:FF&CURRENT_OTA_VERSION=1.0.0
 GET /api/firmware/esp32-devkit/binary?mac=AA:BB:CC:DD:EE:FF
 ```
 

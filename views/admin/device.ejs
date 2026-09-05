@@ -16,9 +16,10 @@
   </div>
 
   <div class="row g-3 mb-3">
-    <div class="col-12 col-md-4"><div class="stat-card"><div class="stat-label">Family ID</div><div class="stat-value stat-value-sm"><%= device.family_id || '-' %></div></div></div>
-    <div class="col-12 col-md-4"><div class="stat-card"><div class="stat-label">Placa</div><div class="stat-value stat-value-sm"><%= device.board || '-' %></div></div></div>
-    <div class="col-12 col-md-4"><div class="stat-card"><div class="stat-label">Ultimo IP</div><div class="stat-value stat-value-sm"><%= device.last_ip || '-' %></div></div></div>
+    <div class="col-12 col-md-3"><div class="stat-card"><div class="stat-label">Family ID</div><div class="stat-value stat-value-sm"><%= device.family_id || '-' %></div></div></div>
+    <div class="col-12 col-md-3"><div class="stat-card"><div class="stat-label">Placa</div><div class="stat-value stat-value-sm"><%= device.board || '-' %></div></div></div>
+    <div class="col-12 col-md-3"><div class="stat-card"><div class="stat-label">Versao OTA atual</div><div class="stat-value stat-value-sm"><%= device.current_ota_version || 'nao informada' %></div></div></div>
+    <div class="col-12 col-md-3"><div class="stat-card"><div class="stat-label">Ultimo IP</div><div class="stat-value stat-value-sm"><%= device.last_ip || '-' %></div></div></div>
   </div>
 
   <section class="panel">

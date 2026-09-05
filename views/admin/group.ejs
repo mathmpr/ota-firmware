@@ -83,17 +83,24 @@
     </div>
     <div class="table-responsive">
       <table class="table table-finora align-middle mb-0">
-        <thead><tr><th>MAC</th><th>Ultimo IP</th><th>Ultimo request</th></tr></thead>
+        <thead><tr><th>MAC</th><th>Versao OTA atual</th><th>Ultimo IP</th><th>Ultimo request</th></tr></thead>
         <tbody>
         <% [...group.devices].sort((a, b) => new Date(b.last_seen_at) - new Date(a.last_seen_at)).forEach((device) => { %>
           <tr>
             <td><code><%= device.mac %></code></td>
+            <td>
+              <% if (device.current_ota_version) { %>
+                <span class="badge text-bg-info">v<%= device.current_ota_version %></span>
+              <% } else { %>
+                <span class="text-muted">nao informada</span>
+              <% } %>
+            </td>
             <td><%= device.last_ip || '-' %></td>
             <td><%= moment(device.last_seen_at).tz('America/Sao_Paulo').format('DD/MM/YYYY HH:mm:ss') %></td>
           </tr>
         <% }) %>
         <% if (!group.devices.length) { %>
-          <tr><td colspan="3" class="text-center text-muted py-5">Nenhum device registrado neste grupo.</td></tr>
+          <tr><td colspan="4" class="text-center text-muted py-5">Nenhum device registrado neste grupo.</td></tr>
         <% } %>
         </tbody>
       </table>

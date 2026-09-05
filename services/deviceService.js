@@ -17,6 +17,11 @@ function normalizeFamilyId(familyId) {
   return String(familyId || '').trim();
 }
 
+function currentOtaVersion(req) {
+  const version = req.query.CURRENT_OTA_VERSION ?? req.query.current_ota_version;
+  return String(version || '').trim() || null;
+}
+
 async function registerManifestRequest(req, board) {
   const mac = normalizeMac(req.query.mac || req.headers['x-device-mac']);
   if (!mac) {
@@ -40,6 +45,12 @@ async function registerManifestRequest(req, board) {
     last_ip: ip,
     last_seen_at: new Date()
   };
+
+  const reportedVersion = currentOtaVersion(req);
+  if (reportedVersion) {
+    devicePayload.current_ota_version = reportedVersion;
+    devicePayload.current_ota_version_reported_at = new Date();
+  }
 
   if (device && (device.family_id !== familyId || device.board !== board)) {
     devicePayload.device_group_id = null;
@@ -80,5 +91,6 @@ module.exports = {
   clientIp,
   normalizeMac,
   normalizeFamilyId,
+  currentOtaVersion,
   registerManifestRequest
 };
