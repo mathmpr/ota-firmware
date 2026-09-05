@@ -96,7 +96,7 @@
               <% } %>
             </td>
             <td><%= device.last_ip || '-' %></td>
-            <td><%= moment(device.last_seen_at).tz('America/Sao_Paulo').format('DD/MM/YYYY HH:mm:ss') %></td>
+            <td><%= moment.utc(device.last_seen_at).tz('America/Sao_Paulo').format('DD/MM/YYYY HH:mm:ss') %></td>
           </tr>
         <% }) %>
         <% if (!group.devices.length) { %>
@@ -118,7 +118,7 @@
             <td><span class="badge text-bg-primary">v<%= firmware.version %></span></td>
             <td><%= firmware.original_name %></td><td><%= firmware.size %> bytes</td>
             <td><%= firmware.active ? 'ativo' : 'substituido' %></td>
-            <td><%= moment(firmware.created_at).tz('America/Sao_Paulo').format('DD/MM/YYYY HH:mm:ss') %></td>
+            <td><%= moment.utc(firmware.created_at).tz('America/Sao_Paulo').format('DD/MM/YYYY HH:mm:ss') %></td>
             <td class="text-end"><form method="post" action="/admin/groups/<%= group.id %>/firmwares/<%= firmware.id %>/delete" class="m-0"><button class="btn btn-sm btn-outline-danger" type="submit">Excluir</button></form></td>
           </tr>
         <% }) %>
